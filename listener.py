@@ -27,7 +27,13 @@ class StdOutListener(StreamListener):
         data = json.loads(data)
         tweet_id = self.write_tweet(data)
         if tweet_id is not None:
-            self.write_hashtags(tweet_id, data['entities']['hashtags'])
+            print data['entities']['hashtags']
+            hash_list = [x['text'] for x in data['entities']['hashtags'] if x['text'] in data['entities']['hashtags']]
+            print hash_list
+
+            for hashtag in hash_list:
+
+                self.write_hashtags(tweet_id, hashtag)
         return True
 
     def on_error(self, status):
@@ -71,13 +77,18 @@ class StdOutListener(StreamListener):
         :param hashtag - contains content of the json document
         :return:
         """
-        #session = self.Session()
+        session = self.Session()
+        hashtag = HashTag(tweet_id=tweet_id, hashtag=hashtag)
+        try:
+            session.add(hashtag)
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
-        print tweet_id, hashtag
-
-        # self.hashtags = ",".join([x['text'] for x in hashtags if x['text'] in hashtags]) if len(hashtags) > 0 else ""
-
-        pass
+        return None
 
 
 def run(search_list, config_file):

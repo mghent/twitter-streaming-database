@@ -50,4 +50,7 @@ class HashTag(Base):
     tweet_id = Column(Integer, ForeignKey('tweet.id'))
     hashtag = Column(String(100))
 
+    def __init__(self, tweet_id, hashtag):
+        self.tweet_id = tweet_id
+        self.hashtag = hashtag
 
