@@ -1,24 +1,38 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import *
+from sqlalchemy.ext.declarative import declarative_base
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///tutorial.db"
-db = SQLAlchemy(app)
+Base = declarative_base()
 
-class Tweet(db.Model):
+def db_connect(db_string):
+    """
+
+    Returns sqlalchemy engine instance
+    """
+    return create_engine(db_string)
+
+
+def create_tables(engine):
+    """
+    Creates tables (DeclarativeBase subclassed)
+    :param engine - SQLAlchemy database engine
+    """
+    Base.metadata.create_all(engine)
+
+
+class Tweet(Base):
     __tablename__ = "tweet"
 
-    id = db.Column(db.Integer, primary_key=True)
-    tweet = db.Column(db.String(140))
-    name = db.Column(db.String(100))
-    username = db.Column(db.String(100))
-    user_id = db.Column(db.String(40))
-    verified = db.Column(db.Boolean)
-    timestamp_ms = db.Column(db.Integer)
-    following = db.Column(db.Integer)
-    followers = db.Column(db.Integer)
+    id = Column(Integer, primary_key=True)
+    tweet = Column(String(140))
+    name = Column(String(100))
+    username = Column(String(100))
+    user_id = Column(String(40))
+    verified = Column(Boolean)
+    timestamp_ms = Column(Integer)
+    following = Column(Integer)
+    followers = Column(Integer)
 
-    def __init__(self, tweet, name, username, user_id, verified, timestamp, hashtags, following, followers):
+    def __init__(self, tweet, name, username, user_id, verified, timestamp, following, followers):
         self.tweet = tweet
         self.name = name
         self.username = username
@@ -28,16 +42,13 @@ class Tweet(db.Model):
         self.following = following
         self.followers = followers
 
-        # self.hashtags = ",".join([x['text'] for x in hashtags if x['text'] in hashtags]) if len(hashtags) > 0 else ""
-
-
     def __repr__(self):
         return '<User %r>' % self.username
 
-class HashTag(db.Model):
+class HashTag(Base):
     __tablename__ = "hashtags"
-    id = db.Column(db.Integer, primary_key=True)
-    tweet_id = db.Column(db.Integer, db.ForeignKey('tweet.id'))
-    hashtag = db.Column(db.String(100))
+    id = Column(Integer, primary_key=True)
+    tweet_id = Column(Integer, ForeignKey('tweet.id'))
+    hashtag = Column(String(100))
 
 

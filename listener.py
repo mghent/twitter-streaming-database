@@ -3,7 +3,9 @@ import argparse
 
 import ConfigParser
 
-from models import db, Tweet, HashTag
+from sqlalchemy.orm import sessionmaker
+
+from models import Tweet, HashTag
 
 from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
@@ -15,11 +17,16 @@ class StdOutListener(StreamListener):
     This is a basic listener that just prints received tweets to stdout.
     """
 
+    def __init__(self):
+        engine = db_connect()
+
+        self.Session = sessionmaker(bind=engine)
+
+
     def on_data(self, data):
         data = json.loads(data)
         tweet_id = self.write_tweet(**data)
         if tweet_id is not None:
-            # Add hashtag
             self.write_hashtags(tweet_id, data['entities']['hashtags'])
 
         return True
@@ -57,14 +64,18 @@ class StdOutListener(StreamListener):
         """
         :return:
         """
+
+        # self.hashtags = ",".join([x['text'] for x in hashtags if x['text'] in hashtags]) if len(hashtags) > 0 else ""
+
         pass
 
 
-def run(search_list):
+def run(search_list, config_file):
     tweet_listener = StdOutListener()
     config = ConfigParser()
-    config.read("tweet.ini")
+    config.read(config_file)
 
+    # Set up the listener
     auth = OAuthHandler(config.get('twitter', 'consumer_key'), config.get('twitter', 'consumer_secret'))
     auth.set_access_token(config.get('twitter', 'access_token'), config.get('twitter', 'access_token_secret'))
     stream = Stream(auth, tweet_listener)
@@ -74,6 +85,8 @@ def run(search_list):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Database twitter streams.')
     parser.add_argument('search_terms', type=str, nargs='+', help='comma separated list of search terms')
+    parser.add_argument('config_file', type=str, nargs='+', help='config file', default="tweet.ini")
     args = parser.parse_args()
+
     search_list = args.search_terms.split(",")
-    run(search_list)
+    run(search_list, args.config_file)
