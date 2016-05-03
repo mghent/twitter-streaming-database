@@ -27,8 +27,7 @@ class StdOutListener(StreamListener):
         data = json.loads(data)
         tweet_id = self.write_tweet(data)
         if tweet_id is not None:
-            hash_list = [x['text'] for x in data['entities']['hashtags'] if 'text' in data['entities']['hashtags']]
-            for hashtag in hash_list:
+            for hashtag in [x['text'] for x in data['entities']['hashtags']]:
                 self.write_hashtags(tweet_id, hashtag)
         return True
 
@@ -61,8 +60,6 @@ class StdOutListener(StreamListener):
             except:
                 session.rollback()
                 raise
-            finally:
-                session.close()
             return tweet.id
         return None
 
@@ -81,9 +78,6 @@ class StdOutListener(StreamListener):
         except:
             session.rollback()
             raise
-        finally:
-            session.close()
-
         return None
 
 
