@@ -27,12 +27,8 @@ class StdOutListener(StreamListener):
         data = json.loads(data)
         tweet_id = self.write_tweet(data)
         if tweet_id is not None:
-            print data['entities']['hashtags']
-            hash_list = [x['text'] for x in data['entities']['hashtags'] if x['text'] in data['entities']['hashtags']]
-            print hash_list
-
+            hash_list = [x['text'] for x in data['entities']['hashtags'] if 'text' in data['entities']['hashtags']]
             for hashtag in hash_list:
-
                 self.write_hashtags(tweet_id, hashtag)
         return True
 
