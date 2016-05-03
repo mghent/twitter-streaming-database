@@ -5,7 +5,6 @@ Base = declarative_base()
 
 def db_connect(db_string):
     """
-
     Returns sqlalchemy engine instance
     """
     return create_engine(db_string)

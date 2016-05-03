@@ -5,7 +5,7 @@ import ConfigParser
 
 from sqlalchemy.orm import sessionmaker
 
-from models import Tweet, HashTag
+from models import Tweet, HashTag, db_connect, create_tables
 
 from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
@@ -19,9 +19,8 @@ class StdOutListener(StreamListener):
 
     def __init__(self):
         engine = db_connect()
-
+        create_tables(engine)
         self.Session = sessionmaker(bind=engine)
-
 
     def on_data(self, data):
         data = json.loads(data)
@@ -34,8 +33,7 @@ class StdOutListener(StreamListener):
     def on_error(self, status):
         print(status)
 
-    @staticmethod
-    def write_tweet(data):
+    def write_tweet(self, data):
         """
         Takes dictionary and writes it to the database
         :param tweet: dictionary containing the following fields
@@ -49,13 +47,20 @@ class StdOutListener(StreamListener):
             'user'['followers_count'] = How many people follow this user
         :return: tweet id
         """
+        session = self.Session()
         if 'user' in data and 'text' in data:
             tweet = Tweet(tweet=data['text'], name=data['user']['name'], username=data['user']['screen_name'],
                           user_id=data['user']['id_str'], verified=data['user']['verified'],
                           timestamp=data['timestamp_ms'], following=data['user']['friends_count'],
                           followers=data['user']['followers_count'])
-            db.session.add(tweet)
-            db.session.commit()
+            try:
+                session.add(tweet)
+                session.commit()
+            except:
+                session.rollback()
+                raise
+            finally:
+                session.close()
             return tweet.id
         return None
 
