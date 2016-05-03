@@ -18,16 +18,16 @@ class StdOutListener(StreamListener):
     """
 
     def __init__(self, db_config_string):
+        StreamListener.__init__(self)
         engine = db_connect(db_config_string)
         create_tables(engine)
-        self.Session = sessionmaker(bind=engine)
+        self.Session = sessionmaker(bind=engine, expire_on_commit=False)
 
     def on_data(self, data):
         data = json.loads(data)
-        tweet_id = self.write_tweet(**data)
+        tweet_id = self.write_tweet(data)
         if tweet_id is not None:
             self.write_hashtags(tweet_id, data['entities']['hashtags'])
-
         return True
 
     def on_error(self, status):
@@ -36,7 +36,7 @@ class StdOutListener(StreamListener):
     def write_tweet(self, data):
         """
         Takes dictionary and writes it to the database
-        :param tweet: dictionary containing the following fields
+        :param tweet: dictionary containing at least the following fields
             'text' - the content of the tweet
             'user'['name'] = twitter real name
             'user'['screen_name'] = twitter screen name
@@ -47,12 +47,12 @@ class StdOutListener(StreamListener):
             'user'['followers_count'] = How many people follow this user
         :return: tweet id
         """
-        session = self.Session()
         if 'user' in data and 'text' in data:
             tweet = Tweet(tweet=data['text'], name=data['user']['name'], username=data['user']['screen_name'],
                           user_id=data['user']['id_str'], verified=data['user']['verified'],
                           timestamp=data['timestamp_ms'], following=data['user']['friends_count'],
                           followers=data['user']['followers_count'])
+            session = self.Session()
             try:
                 session.add(tweet)
                 session.commit()
@@ -64,11 +64,16 @@ class StdOutListener(StreamListener):
             return tweet.id
         return None
 
-    @staticmethod
-    def write_hashtags(tweet_id, hashtag):
+    def write_hashtags(self, tweet_id, hashtag):
         """
+        Writes the hashtags to it's database
+        :param tweet_id - The database id of the tweet
+        :param hashtag - contains content of the json document
         :return:
         """
+        #session = self.Session()
+
+        print tweet_id, hashtag
 
         # self.hashtags = ",".join([x['text'] for x in hashtags if x['text'] in hashtags]) if len(hashtags) > 0 else ""
 
@@ -76,7 +81,17 @@ class StdOutListener(StreamListener):
 
 
 def run(search_list, config_file):
-    config = ConfigParser()
+    """
+
+    :param search_list: python iterable or string (will be converted to list) containing terms to grab
+    :param config_file: address of the config file
+    :return:
+    """
+
+    if isinstance(search_list, str):
+        search_list = list(search_list)
+
+    config = ConfigParser.ConfigParser()
     config.read(config_file)
 
     # Create the database
@@ -86,13 +101,14 @@ def run(search_list, config_file):
     auth = OAuthHandler(config.get('twitter', 'consumer_key'), config.get('twitter', 'consumer_secret'))
     auth.set_access_token(config.get('twitter', 'access_token'), config.get('twitter', 'access_token_secret'))
     stream = Stream(auth, tweet_listener)
-    stream.filter(track=[search_list])
+
+    stream.filter(track=search_list)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Database twitter streams.')
-    parser.add_argument('search_terms', type=str, nargs='+', help='comma separated list of search terms')
-    parser.add_argument('config_file', type=str, nargs='+', help='config file', default="tweet.ini")
+    parser.add_argument("-s", "--search_terms", type=str, help="comma separated list of search terms")
+    parser.add_argument("-c", "--config_file", type=str, help="config file", default="tweet.ini")
     args = parser.parse_args()
 
     search_list = args.search_terms.split(",")
