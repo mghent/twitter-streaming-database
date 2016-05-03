@@ -17,8 +17,8 @@ class StdOutListener(StreamListener):
     This is a basic listener that just prints received tweets to stdout.
     """
 
-    def __init__(self):
-        engine = db_connect()
+    def __init__(self, db_config_string):
+        engine = db_connect(db_config_string)
         create_tables(engine)
         self.Session = sessionmaker(bind=engine)
 
@@ -76,9 +76,11 @@ class StdOutListener(StreamListener):
 
 
 def run(search_list, config_file):
-    tweet_listener = StdOutListener()
     config = ConfigParser()
     config.read(config_file)
+
+    # Create the database
+    tweet_listener = StdOutListener(config.get('setup', 'sqlalchemy_conn'))
 
     # Set up the listener
     auth = OAuthHandler(config.get('twitter', 'consumer_key'), config.get('twitter', 'consumer_secret'))
